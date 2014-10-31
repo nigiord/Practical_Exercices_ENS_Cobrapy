@@ -1,0 +1,222 @@
+\documentclass[a4paper,11pt]{exam}
+
+
+%\printanswers % pour imprimer les réponses (corrigé)
+\noprintanswers % Pour ne pas imprimer les réponses (énoncé)
+%\addpoints % Pour compter les points
+\noaddpoints % pour ne pas compter les points
+\qformat{\textbf{Question \thesection.\thequestion} \hfill} % Pour définir le style des questions (facultatif)
+%\shadedsolutions % définit le style des réponses
+\framedsolutions % définit le style des réponses
+\renewcommand{\solutiontitle}{\noindent\textbf{Solution:}\par\noindent} % Définit le titre des solutions
+
+\usepackage{hyperref}
+\hypersetup{
+unicode=false, % non-Latin characters in Acrobat’s bookmarks
+pdftoolbar=true, % show Acrobat’s toolbar?
+pdfmenubar=true, % show Acrobat’s menu?
+pdffitwindow=false, % window fit to page when opened
+pdfstartview={FitH}, % fits the width of the page to the window
+pdftitle={Environment dynamic structures optimality in cellular economics}, % title
+pdfauthor={Nils Giordano}, % author
+pdfsubject={Machinery optimal control article}, % subject of the document
+pdfcreator={pdflatex}, % creator of the document
+pdfproducer={LateX}, % producer of the document
+pdfkeywords={gene expression machinery} {optimal control} {cell composition}, % list of keywords
+pdfnewwindow=true, % links in new window
+colorlinks=true, % false: boxed links; true: colored links
+linkcolor=blue, % color of internal links (change box color with linkbordercolor)
+citecolor=blue, % color of links to bibliography
+filecolor=magenta, % color of file links
+urlcolor=cyan % color of external links
+}
+
+\usepackage{rotating}
+
+\usepackage{a4wide,amsmath,amssymb,epsfig,multirow}
+\usepackage[T1]{fontenc}
+\usepackage{natbib}
+\usepackage{graphicx}
+
+ % pour la coloration syntaxique
+\usepackage{lmodern}
+\usepackage{color}
+\usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage{listings}
+
+% Default fixed font does not support bold face
+\DeclareFixedFont{\ttb}{T1}{txtt}{bx}{n}{12} % for bold
+\DeclareFixedFont{\ttm}{T1}{txtt}{m}{n}{12}  % for normal
+
+% Custom colors
+\definecolor{SolutionColor}{rgb}{0.9,0.9,0.9} % bleu ciel
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+
+% Python style for highlighting
+\newcommand\pythonstyle{
+	\lstset{
+	prebreak=,
+	language=Python,
+	basicstyle=\ttm,
+	otherkeywords={self},             % Add keywords here
+	keywordstyle=\ttb\color{deepblue},
+	emph={MyClass,__init__},          % Custom highlighting
+	emphstyle=\ttb\color{deepred},    % Custom highlighting style
+	stringstyle=\color{deepgreen},
+	frame=tb,                         % Any extra options here
+%	showstringspaces=false            % 
+	commentstyle=\ttm\color{gray}
+	}
+}
+
+
+
+% Python environment
+\lstnewenvironment{code-python}[1][]
+{
+	\pythonstyle
+	\lstset{#1}
+}
+{}
+
+
+\usepackage{xspace}
+% Python for inline
+\newcommand\pythoninline{\noindent\lstinline[ %\noindent is here because texmaker is buggy...
+	language=Python,
+	basicstyle=\ttm,
+	otherkeywords={self},             % Add keywords here
+	keywordstyle=\ttb\color{deepblue},
+	emph={MyClass,__init__},          % Custom highlighting
+	emphstyle=\ttb\color{deepred},    % Custom highlighting style
+	stringstyle=\color{deepgreen},
+	frame=tb,                         % Any extra options here
+	commentstyle=\ttm\color{gray}
+	]
+}
+
+
+
+\title{\bf Practical Exercises : Flux Balance Analysis using the python module COBRApy (COnstraint-Based Reconstruction and Analysis )}
+\author{Hidde de Jong and Nils Giordano\\
+%\input{mails}
+}
+\date{October 21, 2014}
+
+\linespread{1}
+\begin{document}
+
+\maketitle
+
+This document is largely based on the tutorial accompanying the review by Orth \textit{et al.} (2010), "What is flux balance analysis?", \textit{Nat. Biotechnol.}, 28(3):245-8, as well as a simplified version available at the following address:
+\url{https://noppa.aalto.fi/noppa/kurssi/ke-70.4300/viikkoharjoitukset/KE-70\_4300\_cobra-lisaharjoitus.pdf}.
+
+\section*{Evaluation}
+
+You will find several questions below that we invite you to answer by writing in the boxes reserved for this.
+A single scanned document per group must be sent by email in pdf format by the end of the week (26/10/2014, 23:59).
+
+\section*{COBRApy}
+\label{sec:COBRA}
+
+\subsection*{Principle}
+
+Over the past few decades, large amounts of data at the genome-scale level have accumulated, allowing the increasingly precise reconstruction of metabolic pathways.
+At this level of detail, it is almost impossible to obtain an intuitive understanding of how the entire system works without mathematical and computational analysis.
+Modelling at the genome-scale level may require one to make mathematical abstractions.
+This is also the case in the approach considered in the practical exercises of this course: Flux Balance Analysis (FBA).
+
+FBA focuses on physicochemical constraints, based on current knowledge, to define the set of feasible flux distributions for a biological network in a given condition.
+These constraints can include compartmentalization, mass conservation, molecular crowding, and thermodynamic directionality. FBA selects the flux distribution(s) from the set of feasible flux distributions that optimize(s) a particular objective function.
+
+Flux Balance Analysis can be performed using the python module COnstraints Based Reconstruction and Analysis (COBRA) from the openCOBRA project.
+Its installation is organised around three main components:
+\begin{itemize}
+\item a library to read models in a standardised format (SBML);
+\item a solver to optimise fluxes (GLPK);
+\item a module with pre-defined FBA functions (COBRA).
+\end{itemize}
+
+To install COBRApy on your computer, follow the instructions at: \url{http://opencobra.github.io/cobrapy/}
+
+\subsection*{COBRA Components}
+
+\subsubsection*{SBML: exchange models in systems biology}
+
+Standardisation is often a big problem in the computional sciences.
+In systems biology, one needs to be able to construct, analyse and exchange models in the same way as one needs to construct, analyse and exchange sequence data in genomics.
+The systems biology community has developed the Systems Biology Markup Language (SBML) as a standard for publishing models.
+
+The Systems Biology Markup Language (SBML) is an XML-based language that is free, open and benefits from widespread software support and a community of users and developers (http://sbml.org).
+It can represent many different classes of biological phenomena, including metabolic networks, cell signaling pathways, regulatory networks, infectious diseases, ...
+Software support is usually based on the SMBL library (\url{http://sbml.org/Software/libSBML}).
+
+\subsubsection*{The LP solver}
+
+From a mathematical point of view, the resolution of the optimisation problems in FBA involves linear programming (LP).
+There exist many LP solvers, three of which can be used by the COBRA module.
+For these practical exercices, we will use the LP solver in the open-source GNU Linear Programming Kit (GLPK).
+GLPK is a software package intended for solving large-scale linear programming (LP), mixed integer programming (MIP), and other related problems.
+It is a set of routines written in ANSI C and organized in the form of a library with functions that can be called from within other programs.
+Another option is to use Gurobi, which is freely available for academic use (you just need to activate the licence from an academic domain the first time).
+
+\subsubsection*{The Python module COBRApy}
+
+The COBRApy module contains predefined functions for performing FBA and related functionalities on a constraint-based model.
+A Matlab toolbox is also available with a similar syntax.
+We chose to use Python for this practical exercise because the software is free and open source, but feel free to go to the openCOBRA website if you want to use the Matlab version at home.
+
+Most of the introduction of this practical exercise is inspired from the documentation available at: \url{https://cobrapy.readthedocs.org/en/latest/}. Do not hesitate to use it when you are looking for a particular function.
+
+\begin{figure}
+\centering
+\includegraphics[height=\textwidth, angle=270]{./Fig/map_coli}
+\caption{Map of the \textit{E. coli} iJO1366 central metabolism model.}
+\end{figure}
+
+\subsubsection*{Getting started}
+
+Start by launching an ipython console in a terminal.
+First, you need to initialize and load a model.
+We will use the \textit{E. coli} model "iJO1366 central metabolism" (available by default in cobra.test):
+\begin{code-python}
+import cobra
+import cobra.test
+model = cobra.io.load_matlab_model(cobra.test.ecoli_mat)
+\end{code-python}
+For practical reasons we load a Matlab file, but we could have loaded a SMBL file using \pythoninline{cobra.io.read_sbml_model()}.
+You now have a model object called \pythoninline{model}.
+You can find all reactions, metabolites, and genes of the model stored in the attributes \pythoninline{reactions}, \pythoninline{metabolites}, and \pythoninline{genes} as lists.
+\begin{code-python}
+print len(model.reactions) # 2546 reactions
+print len(model.metabolites) # 1802 metabolites
+print len(model.genes) # 1264 genes
+\end{code-python}
+Each list is made of \pythoninline{Reaction}, \pythoninline{Metabolite} and \pythoninline{Gene} objects.
+\begin{code-python}
+In [x]: model.reactions[29]
+Out[x]: <Reaction EX_5dglcn_e at 0x4529f190>
+\end{code-python}
+If you want to act on a reaction, you will be able to tab-complete the list of elements.
+\begin{code-python}
+# To type what follows,
+# try to press tab after model.reactions.EX_gl
+print model.reactions.EX_glc_e.name
+\end{code-python}
+If you want to list all attributes of a \pythoninline{Reaction}, \pythoninline{Metabolite} or \pythoninline{Gene} object, try pressing tab after adding a point.
+\begin{code-python}
+# try to press tab after model.metabolites.etoh_e.
+print model.metabolites.etoh_e.name
+\end{code-python}
+You can also get a list element using its id.
+\begin{code-python}
+In [x]: model.metabolites.get_by_id('etoh_e')
+Out[x]: <Metabolite etoh_e at 0x4c323d0>
+\end{code-python}
+
+\input{exercices}
+
+\end{document}

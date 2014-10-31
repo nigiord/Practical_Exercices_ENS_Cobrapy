@@ -1,0 +1,325 @@
+\pagebreak
+
+\noindent\makebox[\textwidth]{\textbf{NAMES:}\enspace\dotfill}
+
+\section*{Exercise 1: Computation of aerobic and anaerobic growth rates}
+\setcounter{section}{1}
+
+This section will show how to perform basic FBA calculations.
+We will simulate the growth of \textit{E. coli} with glucose as the sole carbon source under aerobic (high O$_2$) and anaerobic (low O$_2$) conditions.
+
+In flux balance analysis we need to define an objective function for the optimisation problem.
+Objective functions are defined by setting the \pythoninline{objective_coefficient} attribute of a reaction object to a value $> 0$.
+Normally, this has already been done in the model provided.
+To find all the reactions with an \pythoninline{objective_coefficient > 0}, just type the following code.
+\begin{code-python}
+for reaction in model.reactions:
+	if reaction.objective_coefficient > 0:
+		print reaction
+		objective = reaction
+\end{code-python}
+You should identify the flux towards biomass (also called growth rate in FBA) which is used by default in most models.
+To inspect its composition, enter:
+\begin{code-python}
+print objective.reaction
+\end{code-python}
+You can print the full names of the reactants and products in the reaction by typing:
+\begin{code-python}
+for reactant in objective.get_reactants():
+	print reactant.name
+for product in objective.get_products():
+	print product.name
+\end{code-python}
+
+\begin{questions}
+\setcounter{question}{0}
+\question Comment on the composition of the objective function: which general class of metabolites can you identify? Where does the stoichiometry come from?
+
+\begin{solutionorbox}[5cm]
+\input{./Solutions/solution11}
+\end{solutionorbox}
+
+\end{questions}
+
+\noindent We will now compute the distribution of fluxes maximizing this function, and thus maximizing the growth rate.
+We will set the maximum glucose uptake rate to 18.5 mmol gDW$^{-1}$ hr$^{-1}$ (millimoles per gram dry cell weight per hour, the default flux units used in COBRA).
+Note that by convention, uptake reactions have a negative flux because they are written as export reactions (e.g., \pythoninline{glc_D_e <==>}). 
+\begin{code-python}
+# Setting the lower_bound of the uptake of glucose
+model.reactions.EX_glc_e.lower_bound = -18.5
+\end{code-python}
+By doing this, we constrain the glucose uptake rate to a maximum value of 18.5 mmol gDW$^{-1}$ hr$^{-1}$, a biologically realistic uptake rate.
+
+
+\subsection*{Growth simulation in different oxygen conditions}
+
+We will first allow unlimited oxygen availability by changing the boundaries of the oxygen uptake reaction.
+To do so, we set the lower bound of the oxygen uptake reaction to a large number (making it practically unbounded).
+\begin{code-python}
+model.reactions.EX_o2_e.lower_bound = -1000
+\end{code-python}
+We will now try to optimize the objective function in these conditions.
+\begin{code-python}
+model.optimize()
+\end{code-python}
+The solution is stored in \pythoninline{model.solution}.
+A \pythoninline{Solution} object has several attributes, including
+\begin{itemize}
+\item \pythoninline{f}: the objective value;
+\item \pythoninline{status}: the exit status of the LP solver (\pythoninline{'optimal'} if a solution has been found, \pythoninline{'infeasible'} if no solution exists);
+\item \pythoninline{x_dict}: a dictionary of pairs of reaction identifier and flux value;
+\item \pythoninline{x}: a list for \pythoninline{x_dict}.
+\end{itemize}
+For example, the growth rate (the objective value of the solution) can be printed using the following command:
+\begin{code-python}
+print model.solution.f
+\end{code-python}
+A good way to analyse the solution is to draw the map of the fluxes using the module escher.
+\begin{code-python}
+import escher
+solution = model.solution.x_dict
+modelname = "e_coli:iJO1366:central_metabolism"
+modelmap = escher.Builder(modelname, reaction_data=solution)
+modelmap.display_in_browser()
+# Press ctrl+C to continue in the console
+\end{code-python}
+You can change the size-scale or the color-scale of the arrows in \textit{Map>Settings}.
+For instance, a good way to visualize which fluxes are non-zero is to set the ladder to [0 0 0.01].
+If you want to zoom in on a component of the map (reaction or metabolite), try using \textit{ctrl+F}.
+
+\begin{questions}
+\setcounter{question}{1}
+\question What is the growth rate predicted by FBA (\pythoninline{model.solution.f}) in aerobic conditions?
+Which pathways carry significant (non-zero) flux under these conditions?
+\begin{solutionorbox}[3cm]
+\input{./Solutions/solution12}
+\end{solutionorbox}
+\end{questions}
+
+\noindent Next, the same simulation is performed under anaerobic conditions.
+Keep the same model and disable oxygen uptake.
+\begin{code-python}
+model.reactions.EX_o2_e.lower_bound = 0
+\end{code-python}
+Now perform the optimization and draw the map as before.
+
+\begin{questions}
+\setcounter{question}{2}
+\question What is the growth rate predicted under anaerobic conditions?
+Which pathways carry significant flux under these conditions?
+In particular, list all the metabolites that are significantly excreted by the bacteria (transport reactions by diffusion are indicated by the suffix \pythoninline{-tex}).
+Based on what you know of central carbon metabolism, comment on the discrepancies between the solutions in aerobic and anaerobic conditions.
+\begin{solutionorbox}[6cm]
+\input{./Solutions/solution13}
+\end{solutionorbox}
+\end{questions}
+
+\section*{Exercise 2: Growth on alternate substrates}
+\setcounter{section}{2}
+
+Just as FBA was used to calculate growth rates of \textit{E. coli} on glucose in the previous exercise, it can also be used to simulate growth on other substrates.
+The \textit{E. coli} model used contains exchange reactions for several organic compounds, each of which can be used as the sole carbon source under aerobic conditions.
+For example, to simulate growth on succinate instead of glucose, first set the lower bound of the glucose exchange reaction \pythoninline{EX_glc_e} to \pythoninline{0} and the lower bound of the oxygen exchange reaction to \pythoninline{-1000}.
+\begin{code-python}
+model.reactions.EX_glc_e.lower_bound = 0
+model.reactions.EX_o2_e.lower_bound = -1000
+\end{code-python}
+Then set the lower bound of the succinate exchange reaction \pythoninline{EX_succ_e} to \pythoninline{-20} mmol gDW$^{-1}$ hr$^{-1}$ (an arbitrary uptake rate).
+\begin{code-python}
+model.reactions.EX_succ_e.lower_bound = -20
+\end{code-python}
+You can now solve this new optimisation problem.
+\begin{code-python}
+model.optimize()
+\end{code-python}
+
+\begin{questions}
+\setcounter{question}{0}
+\question What is the growth rate of \textit{E. coli} on succinate in aerobic condition?
+If you try the same optimisation in anaerobic conditions, what is the new growth rate?
+\begin{solutionorbox}[2cm]
+\input{./Solutions/solution21}
+\end{solutionorbox}
+\end{questions}
+
+\noindent Based on what you learned during the previous exercise, predict the growth rates of \textit{E. coli} on all 13 organic substrates under \textbf{both aerobic and anaerobic conditions}. For each, use a substrate uptake rate of 20 mmol gDW$^{-1}$ hr$^{-1}$.
+Such a task can be easily performed using a \pythoninline{for} loop (tips: look at the \pythoninline{get_by_id()} attribute).
+
+\begin{questions}
+\setcounter{question}{1}
+\question Fill the following table (substrate names and growth rates).
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\multicolumn{2}{ |c| }{\textbf{Substrate}} & \multicolumn{2}{ |c| }{\textbf{Growth rate (h$^{-1}$)}} \tabularnewline \hline
+\textbf{Name} & \textbf{Id} & \textbf{Aerobic} & \textbf{Anaerobic} \tabularnewline \hline
+\hspace{3cm} & ac\_e & & \tabularnewline \hline
+ & acald\_e & & \tabularnewline \hline
+ & akg\_e & & \tabularnewline \hline
+ & etoh\_e & & \tabularnewline \hline
+ & fru\_e & & \tabularnewline \hline
+ & fum\_e & & \tabularnewline \hline
+ & glc\_e & & \tabularnewline \hline
+ & gln\_\_L\_e & & \tabularnewline \hline
+ & glu\_\_L\_e & & \tabularnewline \hline
+ & lac\_\_D\_e & & \tabularnewline \hline
+ & mal\_\_L\_e & & \tabularnewline \hline
+ & pyr\_e & & \tabularnewline \hline
+ & succ\_e & & \tabularnewline \hline
+\end{tabular}
+\begin{solution}
+\input{./Solutions/solution22}
+\end{solution}
+
+\question What is the highest growth rate? Looking at the maps, can you explain why some substrates cannot be used by \textit{E. coli} in anaerobic conditions?
+\begin{solutionorbox}[3cm]
+\input{./Solutions/solution23}
+\end{solutionorbox}
+\end{questions}
+
+\section*{Exercise 3: Simulation of the maximum growth rate following genetic perturbations}
+\setcounter{section}{3}
+
+You can perform \textit{in-silico} knock-outs in a genome-scale model by 
+setting the reaction fluxes associated with the genes to 0.
+For example, the gene responsible for the expression of PCK (phosphoglycerate kinase, an enzyme in glycolysis), can be deleted as follows:
+\begin{code-python}
+# Don't forget to reinitialize the model before doing this
+model.reactions.EX_glc_e.lower_bound = -10
+model.reactions.EX_o2_e.lower_bound = -1000
+model.reactions.PCK.lower_bound = 0
+model.reactions.PCK.upper_bound = 0
+model.optimize()
+print model.solution.f
+\end{code-python}
+
+\begin{questions}
+\setcounter{question}{0}
+\question Does the PCK knock-out strain grow?
+By looking at the flux map, can you explain what is happening?
+\begin{solutionorbox}[2cm]
+\input{./Solutions/solution31}
+\end{solutionorbox}
+\end{questions}
+
+You can perform all possible single-gene deletions in the model by using the function\linebreak \pythoninline{cobra.flux_analysis.single_deletion()}.
+For each gene in the model, it sets the reaction flux corresponding to the enzyme to 0 and performs the optimization.
+The function returns a dictionary containing the gene identifier and the computed growth rate, and a dictionary containing the gene identifier and the exit status of the optimization process.
+\begin{code-python}
+grates, status = cobra.flux_analysis.single_deletion(model)
+\end{code-python}
+Before using the \pythoninline{single_deletion()} function, remember to set the constraints bounding the uptake rate of the substrates.
+If you want to get a list of all deletions with growth rate > 0.95~h$^{-1}$, you may execute the following code:
+\begin{code-python}
+listgenes = []
+for gene in grates:
+	if grates[gene] > 0.95:
+		listgenes.append(gene)
+print listgenes
+\end{code-python}
+Using a similar script, try to answer the following questions.
+
+\begin{questions}
+\setcounter{question}{1}
+\question In an aerobic environment with glucose as the sole carbon source (uptake rate at most 10 mmol gDW$^{-1}$ hr$^{-1}$), what is the percentage of single-gene deletions that are lethal? (\textit{i.e.}, with a growth rate < 0.01.)
+Select one of these genes and explain why you think it is essential.
+\begin{solutionorbox}[2cm]
+\input{./Solutions/solution32}
+\end{solutionorbox}
+
+\question What is the percentage of single-gene deletions with no measurable effect on growth? (\textit{i.e.}, with a growth rate $\ge$ 99\% of the wild-type growth rate.)
+\begin{solutionorbox}[2cm]
+\input{./Solutions/solution33}
+\end{solutionorbox}
+
+\question The same question as above for anaerobic growth. Comment the differences with the result obtained for aerobic growth.
+\begin{solutionorbox}[5cm]
+\input{./Solutions/solution34}
+\end{solutionorbox}
+
+\end{questions}
+
+\section*{Exercise 4: Alternate optimal solutions: flux variability analysis}
+\setcounter{section}{4}
+
+The flux distribution calculated by FBA is often not unique. In many cases, it is possible for a biological system to achieve the same objective value by using alternate pathways, so phenotypically different alternate optimal solutions are possible.
+A method that uses FBA to identify alternate optimal solutions is Flux Variability Analysis (FVA).
+This is a method that identifies the maximum and minimum possible fluxes through a particular reaction with the objective value constrained to be close to or equal to its optimal value. Performing FVA on a single reaction using the basic COBRA module functions is simple.
+First, calculate the maximal growth rate like before.
+Get the optimal solution (\pythoninline{model.solution.f}), and then set both the lower and upper bounds of the objective reaction to exactly this value.
+Next, set the reaction of interest as the objective using \pythoninline{model.change_objective()}, and use FBA to minimize and maximize this new objective in two separate steps.
+This will give the minimum and maximum possible fluxes through this reaction while contributing to the optimal objective value.
+All the steps described above are performed by the script below, in the case of growth on succinate.
+\begin{code-python}
+model.reactions.EX_glc_e.lower_bound = 0
+model.reactions.EX_succ_e.lower_bound = -20
+solution = model.optimize()
+obj = model.reactions.Ec_biomass_iJO1366_core_53p95M
+obj.lower_bound = solution.f
+obj.upper_bound = solution.f
+
+model.change_objective('ME1');
+ME1_max = model.optimize(objective_sense='maximize')
+ME1_min = model.optimize(objective_sense='minimize')
+
+modelname = "e_coli:iJO1366:central_metabolism"
+modelmap_max = escher.Builder(modelname,
+	reaction_data=ME1_max.x_dict)
+modelmap_min = escher.Builder(modelname,
+	reaction_data=ME1_min.x_dict)
+modelmap_max.display_in_browser()
+#ctrl+C
+modelmap_min.display_in_browser()
+\end{code-python}
+
+\begin{questions}
+\setcounter{question}{0}
+\question Draw the two alternative flux distributions on the map when the \pythoninline{ME1} reaction is set to either its minimum or maximum possible flux. Comment on the differences between the two flux distributions.
+\begin{solutionorbox}[3cm]
+\input{./Solutions/solution41}
+\end{solutionorbox}
+\end{questions}
+The COBRApy module includes a built-in function for performing global FVA called \linebreak \pythoninline{cobra.flux_analysis.flux_variability_analysis()}.
+This function performs the steps described above on every reaction in a model.
+
+\begin{questions}
+\setcounter{question}{1}
+\question For aerobic growth on succinate, with the maximum uptake rate set to -20 mmol gDW$^{-1}$ hr$^{-1}$, what is the percentage of reactions that are completely determined, that is, reactions for which FVA returns strictly equal maximum and minimum fluxes? Comment this result.
+
+\begin{solutionorbox}[3cm]
+\input{./Solutions/solution42}
+\end{solutionorbox}
+\end{questions}
+
+\section*{Exercice 5: Industrial contest}
+\setcounter{section}{5}
+
+Like \textit{Saccharomyces cerevisiae}, \textit{E. coli} is capable of producing ethanol from glucose in certain conditions.
+In this question we aim at maximizing this production rate.
+Before doing expensive experiments, you want to test \textit{in silico} what could be the best growth conditions and genome modifications to optimize ethanol production.
+We choose a glucose uptake rate equal to 10 mmol gDW$^{-1}$ hr$^{-1}$ in anaerobic conditions.
+
+\begin{questions}
+\setcounter{question}{0}
+\question By changing the objective function to ethanol excretion, what is the maximum attainable carbon yield? (\textit{i.e.}, the ratio of the number of carbon atoms included in the ethanol produced versus glucose consumed.)
+What is the growth rate in this condition? (stored in \pythoninline{model.solution.x_dict}.)
+\begin{solutionorbox}[2cm]
+\input{./Solutions/solution51}
+\end{solutionorbox}
+\end{questions}
+
+\noindent Bacteria do not naturally optimize ethanol production, but are believed to maximize their growth rate. Therefore, in order to find a more realistic solution, we need to find ways to improve ethanol production while the overall objective of the cell remains growth-rate maximization. 
+
+\begin{questions}
+\setcounter{question}{1}
+\question Which conditions can you find that most increase the ethanol excretion rate?
+Which growth rate is attained in these conditions?
+What is the carbon yield?
+You can choose every (combination of) substrates (with a maximum uptake rate of 10 mmol gDW$^{-1}$ hr$^{-1}$ for each substrate).
+All gene deletions are allowed, but no more than 5 in a single strain.
+\begin{solutionorbox}[10cm]
+\input{./Solutions/solution52}
+\end{solutionorbox}
+\end{questions}
+
+\noindent We have asked you to solve the above question by trial-and-error, but one should be aware that several extensions of standard FBA have been developed to address the above question in a principled and more rigorous way. For example, MOMA (Minimization of Metabolic Adjustment) has been proposed for growth-rate maximization in mutant strains (Burgard \textit{et al.} (2003), \textit{Biotechnol. Bioeng.}, 84(6):647-57), while OptKnock and its derivatives use bilevel optimization methods to find gene deletions that force the production of desired compounds as a byproduct of optimal growth (Segr\`{e} \textit{et al.} (2002), \textit{Proc. Natl. Acad. Sci. USA}, 99(23):15112-7). MOMA and OptKnock have been integrated as functions in some of the COBRA implementations. (See for instance \pythoninline{cobra.flux_analysis.moma}.)
